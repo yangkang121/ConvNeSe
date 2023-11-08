@@ -1,5 +1,4 @@
 import os
-# os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import argparse
 
 import torch
@@ -15,8 +14,6 @@ import torchvision.models.detection
 
 
 def main(args):
-    # backbone = torchvision.models.convnext_base(pretrained=True)
-    # print(backbone)
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     print(f"using {device} device.")
 
@@ -70,15 +67,12 @@ def main(args):
 
     if args.weights != "":
         assert os.path.exists(args.weights), "weights file: '{}' not exist.".format(args.weights)
-        # torch.load可以加载包含模型参数的.pt、.pth或.pkl文件，并返回一个对应的Python对象，
-        # 通常是一个字典(dictionary)对象，其中包含了保存的各个对象的键值对。
-        # weights_dict = torch.load(args.weights, map_location=device)["model"]
         weights_dict = torch.load(args.weights, map_location=device)
         # 删除有关分类类别的权重
         for k in list(weights_dict.keys()):
             if "head" in k:
                 del weights_dict[k]
-        print(model.load_state_dict(weights_dict, strict=False)) # 将预先训练的权重加载到指定的模型对象
+        print(model.load_state_dict(weights_dict, strict=False))
 
     if args.freeze_layers:
         for name, para in model.named_parameters():
@@ -88,12 +82,8 @@ def main(args):
             else:
                 print("training {}".format(name))
 
-    # pg = [p for p in model.parameters() if p.requires_grad]
-    # 函数返回一个包含多个字典对象的列表，每个字典对应一个参数组
     pg = get_params_groups(model, weight_decay=args.wd)
     optimizer = optim.AdamW(pg, lr=args.lr, weight_decay=args.wd)
-    # 创建一个学习率调度器（lr_scheduler）对象，用于在训练期间根据指定的规则动态调整模型的学习率。
-    # 训练周期数和是否进行热身（warmup）等选项。其中热身（warmup）指从较低的学习率开始进行训练，逐渐增加学习率的过程
     lr_scheduler = create_lr_scheduler(optimizer, len(train_loader), args.epochs,
                                        warmup=True, warmup_epochs=1)
 
@@ -113,12 +103,6 @@ def main(args):
                                      device=device,
                                      epoch=epoch)
 
-        # tags = ["train_loss", "train_acc", "val_loss", "val_acc", "learning_rate"]
-        # tb_writer.add_scalar(tags[0], train_loss, epoch)
-        # tb_writer.add_scalar(tags[1], train_acc, epoch)
-        # tb_writer.add_scalar(tags[2], val_loss, epoch)
-        # tb_writer.add_scalar(tags[3], val_acc, epoch)
-        # tb_writer.add_scalar(tags[4], optimizer.param_groups[0]["lr"], epoch)
         tb_writer.add_scalars('loss', {'train_loss': train_loss, 'val_loss': val_loss}, epoch)
         tb_writer.add_scalars('acc', {'train_acc': train_acc, 'val_acc': val_acc}, epoch)
         tb_writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], epoch)
@@ -138,7 +122,7 @@ if __name__ == '__main__':
 
     # 数据集所在根目录
     parser.add_argument('--data-path', type=str,
-                        default=r"")  
+                        default=r"")
 
     # 预训练权重路径，如果不想载入就设置为空字符
     parser.add_argument('--weights', type=str, default='',
